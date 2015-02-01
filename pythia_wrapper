@@ -1,0 +1,76 @@
+#!/bin/bash
+
+set -e
+
+addpath()
+{
+	target=$1
+	tst=$2
+	if [ -d $target/$tst/src ]
+	then
+		GOPATH=$GOPATH:$target/$tst
+	fi
+}
+
+pkg=$1
+
+# escape to bash for debugging
+[ "$pkg" == "bash" ] && exec bash
+
+if [ "$pkg" == "-h" ]
+then
+	cat <<EOUSAGE
+
+It is best to use this container via the supplied script.
+
+To get the script do:
+
+  docker run --rm -i pythia script > run_pythia ; chmod +x run_pythia
+
+Then you can run it as:
+
+  ./run_pythia [options] <srcdir>
+
+For help:
+
+  ./run_pythia -h
+EOUSAGE
+	exit 1
+fi
+
+# export script
+if [ "$pkg" == "script" ]
+then
+	cat /root/run_pythia
+	exit 0
+fi
+
+# if no real package name was specified (either empty or no path
+# Try to get a real one
+
+if [ $(dirname "$pkg") == "." ]
+then
+	if [ -f /src/.godir ]
+	then
+		pkg=`cat /src/.godir`
+	else
+		[ -z "$pkg" ] && pkg=app
+	fi
+fi
+
+path=$(dirname $pkg)
+name=$(basename $pkg)
+
+echo "Path: " $path
+echo "Name: " $name
+
+mkdir -p /go/src/$path
+
+target=/go/src/$path/$name
+ln -s /src $target
+
+addpath $target Godeps/_workspace
+addpath $target vendor
+
+pythia /go/src/$path/$name/*go
+

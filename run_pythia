@@ -1,0 +1,47 @@
+#!/bin/bash
+
+set -e
+
+usage()
+{
+	echo "Usage: $0 [options] <source dir>"
+	echo "   -p <port>       Port to bind (default 8080)"
+	echo "   -f <pkg>        The full package name at root of source directory"
+	echo "   -h              This message"
+	exit 1
+}
+
+port=8080
+
+while getopts f:p: opt
+do
+	case $opt in
+	f)	ppath=$OPTARG ;;
+	p)	port=$OPTARG ;;
+	h)	usage ;;
+	?)	usage ;;
+	esac
+done
+
+shift $(( OPTIND - 1 ))
+
+code=$1
+
+if [ -z "$code" ]
+then
+	usage
+fi
+
+if [ ! -d $code ]
+then
+	echo "Error: no such directory $code"
+	exit 2
+fi
+
+if [ -z "$ppath" ]
+then
+	ppath=$(basename $code)
+fi
+
+docker run --rm -it -p $port:8080 -v $(readlink -f $code):/src pythia $ppath
+
